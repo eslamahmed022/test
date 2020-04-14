@@ -5,8 +5,6 @@
 #include <queue> 
 #include <stack>
 #include <functional>
-#include <dos.h> //for delay
-#include<conio.h>
 #include <chrono>
 #include <iomanip>
 #include <ros/ros.h>
@@ -15,10 +13,32 @@
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_listener.h>
 #include <nav_msgs/GetMap.h>
-
+#include <tf/transform_datatypes.h>
+#include "geometry_msgs/PoseWithCovarianceStamped.h"
+#include <math.h>
+// C function showing how to do time delay 
+#include <stdio.h> 
+// To use time library of C 
+#include <time.h> 
+  
 
 #define INF 1e9
 using namespace std;
+float current_x,current_y; // current pose
+ 
+
+void delay(int number_of_seconds) 
+{ 
+    // Converting time into milli_seconds 
+    int milli_seconds = 1000 * number_of_seconds; 
+  
+    // Storing start time 
+    clock_t start_time = clock(); 
+  
+    // looping till required time is not achieved 
+    while (clock() < start_time + milli_seconds) 
+        ; 
+} 
 vector<vector<pair<int, int>>> adj_list;
 vector<pair<vector<int>, int>>path_v3;
 vector <int> check(6, 0);
@@ -81,11 +101,14 @@ pair<vector<int>, vector<int> > shortest_distance(int src
 }
 
 vector<int> Get_Path(int src, int des, vector<int> p) {
+
+
 	stack<int> path_nodes;
 	int node2 = des;
-
+     
 	path_nodes.push(node2);
 	vector<int>path;
+      
 	while (p[node2] != node2) {
 		node2 = p[node2];
 		path_nodes.push(node2);
@@ -107,28 +130,32 @@ double distance2N(pair<int, int> node1, pair<int, int> node2) {
 		abs(node1.second - node2.second) * abs(node1.second - node2.second));
 
 }
-vector<int> Nearest(pair<int, int> curPos, vector<int> unVisitList, int node_num) {
+vector<int> Nearest( vector<int> unVisitList, int node_num) {
 
-	vector<double> distanceList(unVisitList.size(), INF);//o(n)
+	//vector<double> distanceList(unVisitList.size(), INF);//o(n)
 	vector<vector<int>>paths;
 	vector<int>path;
+vector<int>path2;
 	int min = INF;
 	int min_size = INF;
 
 	//Node NearestNode = unVisitList[0];
-	for (int i = 0; i < unVisitList.size(); i++) {//o(n)
+	/*for (int i = 0; i < unVisitList.size(); i++) {//o(n)
 		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
 			continue;
 		}
 		distanceList[i] = 1;
-	}
+	}*/
 	//FIND MIN DISTANCE NODE
-	for (int i = 0; i < distanceList.size(); i++) {//o(n^3logn)
-		if (distanceList[i] == INF) {
+path2=shortest_distance(node_num).second;
+	for (int i = 0; i < unVisitList.size(); i++) {//o(n^3logn)
+		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
 			continue;
 		}
-		path = Get_Path(node_num, i, shortest_distance(node_num).second);
-		distanceList[i] = INF;
+                if(path2[i]==-1)
+                 continue; 
+		path = Get_Path(node_num, i,path2 );
+		
 		if (path.size() < min_size) {
 			min_size = path.size();
 
@@ -136,12 +163,11 @@ vector<int> Nearest(pair<int, int> curPos, vector<int> unVisitList, int node_num
 
 		}
 
-
-
-
 	}
 
-
+if(paths.size()==0){
+return path;
+}
 
 	return paths[paths.size() - 1];
 }
@@ -178,12 +204,61 @@ int find_v5(pair<int, int> node) {
 	}
 	return -1;
 }
+vector<vector<pair<int, int>>> matrix(6);//o(1)
+bool chech_point(int x,int y){
+ROS_INFO("x=%d y=%d",x,y );
+for(int i=0;i<10;i++){
+
+/*if(x+i < matrix.size() && y+i < matrix.size())
+
+{if(matrix[x+i][y+i].second!=0)
+  return false ;
+}
+
+if(x-i >=0 && y-i >= 0)
+
+{if(matrix[x-i][y-i].second!=0)
+  return false ;
+}
+if(x+i < matrix.size() && y-i >= 0)
+
+{if(matrix[x+i][y-i].second!=0)
+  return false ;
+}
+if(x-i >= 0 && y+i < matrix.size())
+
+{if(matrix[x-i][y+i].second!=0)
+  return false ;
+}
+if(x-i >= 0)
+{if(matrix[x-i][y].second!=0)
+  return false ;
+}
+if(y-i >= 0)
+{if(matrix[x][y-i].second!=0)
+  return false ;
+}
+if(y+i < matrix.size())
+{if(matrix[x][y+i].second!=0)
+  return false ;
+}
+if(x+i < matrix.size())
+{if(matrix[x+i][y].second!=0)
+  return false ;
+}
+
+}
+return true;
+*/
+ return false;
+}
 int rows;
 int cols;
 double mapResolution;
 vector<vector<int> > grid;
+nav_msgs::OccupancyGrid result ;
 pair<bool, nav_msgs::OccupancyGrid> requestMap(ros::NodeHandle& nh);
-void readMap(const nav_msgs::OccupancyGrid& msg);
+void readMap(const nav_msgs::OccupancyGrid msg);
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 int main(int argc, char** argv) {
@@ -191,22 +266,25 @@ int main(int argc, char** argv) {
 	ros::init(argc, argv, "PoseUpdate");
 	ros::init(argc, argv, "load_ogm");
 	ros::NodeHandle nh;
-	pair<bool, nav_msgs::OccupancyGrid> result = requestMap(nh);
-	if (!result.first)
-		exit(-1);
 
-	ros::NodeHandle n;
+ ros::Subscriber maps =  nh.subscribe<nav_msgs::OccupancyGrid>( "/map",1, readMap); 
+	
+	delay(1000);
 
-	ros::Rate rate(1.0);
+	  ros::spinOnce();
+
+	ros::Rate rate(1);
+
+
 	tf::TransformListener listener;
 	tf::StampedTransform transform;
 	int grid_x;
 	int grid_y;
 	float map_x, map_y;
-
+       
 	clock_t  start, end;
-	int num= result.second.info.width;
-
+	int num= result.info.width;
+ matrix.resize(num);
 	
 	int t;
 
@@ -217,7 +295,7 @@ int main(int argc, char** argv) {
 	//num = 10000;
 	int rt = num * num;
 
-	vector<vector<pair<int, int>>> matrix(num);//o(1)
+	
 	check.resize(rt);//o(1)
 
 	start = clock();
@@ -246,32 +324,20 @@ int main(int argc, char** argv) {
 
 		}
 
-	while (n.ok())
-	{
-		tf::StampedTransform transform;
-		try
-		{
+	
+	
+		
+		
 			//ROS_INFO("Attempting to read pose...");
+  listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 			listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 			map_x = transform.getOrigin().x();
 			map_y = transform.getOrigin().y();
-			grid_x = (unsigned int)((map_x - result.second.info.origin.position.x) / result.second.info.resolution);
-			grid_y = (unsigned int)((map_y - result.second.info.origin.position.y) / result.second.info.resolution);
+			grid_x = (unsigned int)((map_x - result.info.origin.position.x) / result.info.resolution);
+			grid_y = (unsigned int)((map_y - result.info.origin.position.y) / result.info.resolution);
 			ROS_INFO("Got a index! x = %d, y = %d", grid_x, grid_y);;;
 
-			break;
-
-		}
-		catch (tf::TransformException ex)
-		{
-			ROS_ERROR("Nope! %s", ex.what());
-		}
-
-
-		rate.sleep();
-
-	}
-
+	
 	int begin_row=grid_x, begin_colum=grid_y;
 	
 	pair<int, int> source(begin_row, begin_colum);
@@ -286,11 +352,10 @@ int main(int argc, char** argv) {
 	int d1 = 0, d2 = 0, d3 = 2, b = 1;
 	int best_script = 0;
 	int best_cost = INF;
-	vector<int>copy_check;
 	
-
-
-	copy_check = check;
+	
+ 
+	
 	path_v4.clear();
 	//o(n^2)
 	for (int j = 0; j < matrix.size(); j++) {
@@ -352,18 +417,13 @@ int main(int argc, char** argv) {
 	int next;
 	int flag = 0;
 	int postion = 0;
+ros::NodeHandle n2;
 
-	vector<int> output(num * num, -1);//o(n)
-
-	int count_step = 0;
-
+	
+	
 	vector<int>path_2;
 	int idex_t;
-	end = clock();
-	 time_taken = double(end - start) / double(CLOCKS_PER_SEC);
-	cout << "Time :" << time_taken << endl;
-	cout << "path: ";
-	//o(n)
+	
 	MoveBaseClient ac("move_base", true);
 
 	while (!ac.waitForServer(ros::Duration(5.0))) {
@@ -371,29 +431,50 @@ int main(int argc, char** argv) {
 	}
 
 	move_base_msgs::MoveBaseGoal goal;
-
+       
 	goal.target_pose.header.frame_id = "map";
-	goal.target_pose.header.stamp = ros::Time::now();
+	
 
 	
-	while (find(copy_check.begin(), copy_check.end(), 0) != copy_check.end()) {
-		if (output[next_node] == -1)
-		{
-			output[next_node] = count_step;
-		}
-		grid_x = (unsigned int)((map_x - result.second.info.origin.position.x) / result.second.info.resolution);
-		goal.target_pose.pose.position.x = (m[next_node].first * result.second.info.resolution) + result.second.info.origin.position.x;
-		goal.target_pose.pose.position.y = (m[next_node].second * result.second.info.resolution) + result.second.info.origin.position.y;
-		//goal.target_pose.pose.orientation.w = 1.0;
+	while (find(check.begin(), check.end(), 0) != check.end()) {
+		
+   
+
+if(chech_point(m[next_node].first,m[next_node].second)){		
+   goal.target_pose.header.stamp = ros::Time::now();
+		goal.target_pose.pose.position.x = ((m[next_node].first * result.info.resolution)+result.info.origin.position.x);
+		goal.target_pose.pose.position.y = ((m[next_node].second * result.info.resolution)+result.info.origin.position.y );
+printf("%d",grid[m[next_node].first][m[next_node].second]);
+
+/*calculate angle*/
+ listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
+listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
+			current_x = transform.getOrigin().x();
+			current_y = transform.getOrigin().y();
+
+ROS_INFO("x=%f y=%f",current_x,current_y );
+
+    double x = goal.target_pose.pose.position.x  - current_x;
+    double y = goal.target_pose.pose.position.y  - current_y;
+    double theta = atan2(y,x);
+    // convert angle to quarternion
+   tf::Quaternion quaternion;
+   quaternion = tf::createQuaternionFromYaw(theta);
+geometry_msgs::Quaternion qMsg;
+ tf::quaternionTFToMsg(quaternion, qMsg);
+ // set quarternion to goal
+ goal.target_pose.pose.orientation = qMsg;
+		
 
 		ROS_INFO("Sending goal");
+ROS_INFO("x=%f y=%f",goal.target_pose.pose.position.x,goal.target_pose.pose.position.y );
 		ac.sendGoal(goal);
-		delay(10000);
+		
 		//ac.waitForResult();
 
-		
+		delay(10000);
 
-		
+	}	
 		path_v4.push_back(next_node);
 
 		if (find_v2(stack, next_node) != 1) {
@@ -403,15 +484,12 @@ int main(int argc, char** argv) {
 		}
 
 
-		count_step++;
-		cost += distance;
-		copy_check[next_node] = 1;
+		
+		check[next_node] = 1;
 
 
-		do {
-			if (find(copy_check.begin(), copy_check.end(), 0) == copy_check.end()) {
-				break;
-			}
+		
+			
 			flag = 0;
 
 			for (int i = 0; i < adj_list[next_node].size(); i++) {
@@ -420,30 +498,30 @@ int main(int argc, char** argv) {
 				}
 
 				flag = 1;
-				distance = adj_list[next_node][i].second;
+				
 				next_node = adj_list[next_node][i].first;
 
 				break;
 			}
 			if (flag == 0) {
 
-				path_2 = Nearest(m.find(next_node)->second, copy_check, next_node);
+				path_2 = Nearest( check, next_node);
+                                if(path_2.size()!=0){
+
 				path_v4.insert(path_v4.end(), path_2.begin() + 1, path_2.end() - 1);//o(n)
 				next_node = path_2[path_2.size() - 1];
-				
-				for (int i = 1; i < path_2.size() - 1; i++) {
-					cout << path_2[i] << " ";
-				}
-				distance = path_2.size() - 1;
+				}else{
 
-				count_step += distance - 1;
+printf("there is stuck points");
+return 0;
 
-
-				flag = 1;
-			}
-		} while (flag == 0);
+                 }
+			
+		
 
 	}
+}
+
 	return 0;
 
 }
@@ -459,12 +537,13 @@ int main(int argc, char** argv) {
 pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 	nav_msgs::GetMap::Request req;
 	nav_msgs::GetMap::Response res;
-	while (!ros::service::waitForService("static_map", ros::Duration(3.0)))
+
+	while (!ros::service::waitForService("map", ros::Duration(3.0)))
 	{
 		ROS_INFO("Waiting for service static_mapto become available");
 	}
 	ROS_INFO("Requesting the map...");
-	ros::ServiceClient mapClient = nh.serviceClient<nav_msgs::GetMap>("static_map");
+	ros::ServiceClient mapClient = nh.serviceClient<nav_msgs::GetMap>("map");
 	if (mapClient.call(req, res))
 	{
 		readMap(res.map);
@@ -481,8 +560,9 @@ pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 
 
 
-void readMap(const nav_msgs::OccupancyGrid& map)
+void readMap(const nav_msgs::OccupancyGrid map)
 {
+result=map;
 	ROS_INFO("Received a %d X %d map @ %.3f m/px\n", map.info.width, map.info.height, map.info.resolution);
 	rows = map.info.height;
 	cols = map.info.width;
@@ -497,12 +577,17 @@ void readMap(const nav_msgs::OccupancyGrid& map)
 	for (int i = 0; i < rows; i++)
 	{
 		for (int j = 0; j < cols; j++) {
-			if (map.data[currCell] == 0) // unoccupied cell
-				grid[i][j] = 0;
-			else grid[i][j] = 1; // occupied (100) or unknown cell (-1)
+			if (map.data[currCell] == 0){ // unoccupied cell
+				grid[currCell%rows][currCell/rows] = 0;
+
+                                  }
+			else{
+grid[currCell%rows][currCell/rows] = 1; // occupied (100) or unknown cell (-1)
+
+}
 			currCell++;
 		}
+
 	}
+
 }
-
-
