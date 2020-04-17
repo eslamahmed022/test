@@ -609,7 +609,7 @@ void save_map(const nav_msgs::OccupancyGrid map) {
 }
 
 
-pair<bool, nav_msgs::OccupancyG"/home/islam/catkin_ws2/src/roomba_nev/bag/map.bag"rid>  requestMap(ros::NodeHandle& nh) {
+pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 	nav_msgs::GetMap::Request req;
 	nav_msgs::GetMap::Response res;
 
