@@ -212,7 +212,7 @@ int find_v5(pair<int, int> node) {
 	return -1;
 }
 vector<vector<pair<int, int>>> matrix(6);//o(1)
-bool chech_point(int x, int y) {
+bool check_point(int x, int y) {
 	ROS_INFO("x=%d y=%d", x, y);
 	for (int i = 1; i < 6; i++) {
 		if (x + i < matrix.size() && y + i < matrix.size())
@@ -504,7 +504,7 @@ int main(int argc, char** argv) {
 	while (find(check.begin(), check.end(), 0) != check.end()) {
 
 
-		if (chech_point(m[next_node].first, m[next_node].second)) {
+		if (check_point(m[next_node].first, m[next_node].second)) {
 
 
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
@@ -569,11 +569,6 @@ int main(int argc, char** argv) {
 
 		path_v4.push_back(next_node);
 
-		if (find_v2(stack, next_node) != 1) {
-			postion = path_v4.size() - 1;
-			stack.push_back({ { next_node,1 },postion });
-
-		}
 
 
 
@@ -585,7 +580,7 @@ int main(int argc, char** argv) {
 		flag = 0;
 
 		for (int i = 0; i < adj_list[next_node].size(); i++) {
-			if (find_v4(stack, adj_list[next_node][i].first) == 1) {
+			if (check[adj_list[next_node][i].first] != 0) {
 				continue;
 			}
 
@@ -601,7 +596,7 @@ int main(int argc, char** argv) {
 			if (path_2.size() != 0) {
 
 				for (int i = 1; i < path_2.size() - 1; i++) {
-					if (chech_point(m[path_2[i]].first, m[path_2[i]].second)) {
+					if (check_point(m[path_2[i]].first, m[path_2[i]].second)) {
 						x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x) - current_x;
 						y = ((m[path_2[i]].second * result.info.resolution) + result.info.origin.position.y) - current_y;
 						pos_x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x);
@@ -610,16 +605,17 @@ int main(int argc, char** argv) {
 						listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 						current_x = transform.getOrigin().x();
 						current_y = transform.getOrigin().y();
+
 						ROS_INFO(" current x=%f y=%f", current_x, current_y);
-						if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
+						//if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
 
 							/*calculate angle*/
-
+						  
 							goal.target_pose.pose.position.x = current_x;
 
 							goal.target_pose.pose.position.y = current_y;
 
-
+							cover(path_2[i]);
 
 							double theta = atan2(y, x);
 							// convert angle to quarternion
@@ -639,7 +635,7 @@ int main(int argc, char** argv) {
 							goal.target_pose.header.stamp = ros::Time::now();
 							goal.target_pose.pose.position.x = pos_x;
 							goal.target_pose.pose.position.y = pos_y;
-							printf("%d", grid[m[next_node].first][m[next_node].second]);
+							printf("%d", grid[m[path_2[i]].first][m[path_2[i]].second]);
 							ROS_INFO("Sending goal");
 							ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 							ac.sendGoal(goal);
@@ -649,11 +645,12 @@ int main(int argc, char** argv) {
 							else
 								ROS_INFO("The base failed to move forward 1 meter for some reason");
 
-						}
+						//}
 
 					}
 				}
 				next_node = path_2[path_2.size() - 1];
+				
 			}
 			else {
 
