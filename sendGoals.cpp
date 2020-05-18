@@ -16,13 +16,8 @@
 #include <tf/transform_datatypes.h>
 #include "rosbag/bag.h"
 #include <rosbag/view.h>
-#include <costmap_2d/costmap_2d_ros.h>
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
 #include <math.h>
-#include <tf2_ros/buffer.h>
-#include <tf2_ros/transform_listener.h>
-#include <carrot_planner/carrot_planner.h>
-
 // C function showing how to do time delay 
 #include <stdio.h> 
 // To use time library of C 
@@ -32,6 +27,7 @@
 #define INF 1e9
 using namespace std;
 float current_x, current_y; // current pose
+string map_path ;
 
 
 void delay(int number_of_seconds)
@@ -260,78 +256,26 @@ bool check_point(int x, int y) {
 
 
 }
-void cover(int point) {
-	pair<int, int> coardinates = m[point];
-	int x = coardinates.first;
-	int y = coardinates.second;
-		ROS_INFO("x=%d y=%d", x, y);
-	for (int i = 1; i < 6; i++) {
-		if (x + i < matrix.size() && y + i < matrix.size())
-		{
-			if (check[find_v5({ x + i,y + i })] == 0)
-				check[find_v5({ x + i,y + i })] = 1;
-		}
-		if (x - i >= 0 && y - i >= 0)
-		{
-			if (check[find_v5({ x - i,y - i })] == 0)
-				check[find_v5({ x - i,y - i })] = 1;
-		}
-		if (x + i < matrix.size() && y - i >= 0)
-		{
-			if (check[find_v5({ x + i,y - i })] == 0)
-				check[find_v5({ x + i,y - i })] = 1;
-		}
-		if (x - i >= 0 && y + i < matrix.size())
-		{
-			if (check[find_v5({ x - i,y + i })] == 0)
-				check[find_v5({ x - i,y + i })] = 1;
-		}
-		if (x - i >= 0)
-		{
-			if (check[find_v5({ x - i,y })] == 0)
-				check[find_v5({ x - i,y })] = 1;
-		}
-		if (y - i >= 0)
-		{
-			if (check[find_v5({ x,y - i })] == 0)
-				check[find_v5({ x,y - i })] = 1;
-		}
-		if (y + i < matrix.size())
-		{
-			if (check[find_v5({ x,y + i })] == 0)
-				check[find_v5({ x,y + i })] = 1;
-		}
-		if (x + i < matrix.size())
-		{
-			if (check[find_v5({ x + i,y })] == 0)
-				check[find_v5({ x + i,y })] = 1;
-		}
-	}
-
-
-}
 int rows;
 int cols;
 double mapResolution;
 vector<vector<int> > grid;
 nav_msgs::OccupancyGrid result;
 pair<bool, nav_msgs::OccupancyGrid> requestMap(ros::NodeHandle& nh);
-void readMap(const nav_msgs::OccupancyGrid msg);
+void readMap( char* path);
 void save_map(const nav_msgs::OccupancyGrid map);
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 int main(int argc, char** argv) {
 	ros::init(argc, argv, "navigation_goals");
-	ros::init(argc, argv, "PoseUpdate");
-	ros::init(argc, argv, "load_ogm");
+
 	ros::NodeHandle nh;
 
-	ros::Subscriber maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, readMap);
+	ROS_INFO("%s",argv[1]);
+	readMap(argv[1]);
 
-	delay(1000);
-
-	ros::spinOnce();
 
 	ros::Rate rate(1);
+	map_path=argv[1];
 
 
 	tf::TransformListener listener;
@@ -340,7 +284,7 @@ int main(int argc, char** argv) {
 	int grid_y;
 	float map_x, map_y;
 
-
+	clock_t  start, end;
 	int num = result.info.width;
 	matrix.resize(num);
 
@@ -350,13 +294,13 @@ int main(int argc, char** argv) {
 
 
 	int num_node = 0;
-	//num = 10000;
+
 	int rt = num * num;
 
 
 	check.resize(rt);//o(1)
 
-
+	start = clock();
 	//o(n)
 	for (int i = 0; i < num; i++) {
 		for (int j = 0; j < num; j++) {
@@ -399,7 +343,7 @@ int main(int argc, char** argv) {
 	int begin_row = grid_x, begin_colum = grid_y;
 
 	pair<int, int> source(begin_row, begin_colum);
-
+	start = clock();
 	int tr = num * num;
 	int rowm, columm;
 	vector<int>path_v4;
@@ -477,7 +421,7 @@ int main(int argc, char** argv) {
 	int postion = 0;
 	ros::NodeHandle n2;
 
-
+ros::Subscriber maps;
 
 	vector<int>path_2;
 	int idex_t;
@@ -492,19 +436,18 @@ int main(int argc, char** argv) {
 
 	goal.target_pose.header.frame_id = "map";
 
-	std::vector<geometry_msgs::PoseStamped> plan;
-	geometry_msgs::PoseStamped start;
-	geometry_msgs::PoseStamped end;
-	double x, pos_x, pos_y, y;
-	//  tf2_ros::Buffer mytf(ros::Duration(10));
 
-   //costmap_2d::Costmap2DROS costmap("my_costmap", mytf);
-	 //       carrot_planner::CarrotPlanner cp  ;
-	   //     cp.initialize("my_carrot_planner", &costmap);
-	while (find(check.begin(), check.end(), 0) != check.end()) {
+//	std::vector<geometry_msgs::PoseStamped> plan;
+ //geometry_msgs::PoseStamped start  ;
+ //geometry_msgs::PoseStamped end  ;
+double x,pos_x,pos_y ,y;
+ //  tf2_ros::Buffer mytf(ros::Duration(10));
 
-
-		if (check_point(m[next_node].first, m[next_node].second)) {
+//costmap_2d::Costmap2DROS costmap("my_costmap", mytf);
+  //       carrot_planner::CarrotPlanner cp  ;
+    //     cp.initialize("my_carrot_planner", &costmap);
+		while (find(check.begin(), check.end(), 0) != check.end()) {
+	if (check_point(m[next_node].first, m[next_node].second)) {
 
 
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
@@ -520,9 +463,9 @@ int main(int argc, char** argv) {
 			ROS_INFO("x=%f y=%f", pos_x, pos_y);
 			float dist = distance2N({ current_x,current_y }, { pos_x,pos_y });
 			ROS_INFO(" distance=%f ", dist);
-			cover(next_node);
+			//cover(next_node);
 
-			//if(dist>0.1){
+			if(dist>0.1){
 
 
 			/*calculate angle*/
@@ -563,7 +506,7 @@ int main(int argc, char** argv) {
 			else
 				ROS_INFO("The base failed to move forward 1 meter for some reason");
 
-			//}
+			}
 
 		}
 
@@ -607,7 +550,7 @@ int main(int argc, char** argv) {
 						current_y = transform.getOrigin().y();
 
 						ROS_INFO(" current x=%f y=%f", current_x, current_y);
-						//if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
+						if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
 
 							/*calculate angle*/
 						  
@@ -615,7 +558,7 @@ int main(int argc, char** argv) {
 
 							goal.target_pose.pose.position.y = current_y;
 
-							cover(path_2[i]);
+							//cover(path_2[i]);
 
 							double theta = atan2(y, x);
 							// convert angle to quarternion
@@ -645,7 +588,7 @@ int main(int argc, char** argv) {
 							else
 								ROS_INFO("The base failed to move forward 1 meter for some reason");
 
-						//}
+						}
 
 					}
 				}
@@ -667,25 +610,29 @@ int main(int argc, char** argv) {
 
 
 
+			}
+ 
+			
 		}
-	}
-	printf("finish");
-	maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
+printf("finish");
+	 maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
 
 	delay(1000);
 
 	ros::spinOnce();
 
-	return 0;
+		return 0;
 
-}
+	}
+
+
 
 
 
 void save_map(const nav_msgs::OccupancyGrid map) {
 
 	rosbag::Bag map_storage;
-	map_storage.open("/home/islam/catkin_ws2/src/roomba_nev/bag/map.bag", rosbag::bagmode::Write);
+	map_storage.open(map_path, rosbag::bagmode::Write);
 	map_storage.write<nav_msgs::OccupancyGrid>("map", ros::Time::now(), map);
 	map_storage.close();
 	return;
@@ -693,9 +640,6 @@ void save_map(const nav_msgs::OccupancyGrid map) {
 
 
 }
-
-
-
 
 
 pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
@@ -710,7 +654,7 @@ pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 	ros::ServiceClient mapClient = nh.serviceClient<nav_msgs::GetMap>("map");
 	if (mapClient.call(req, res))
 	{
-		readMap(res.map);
+
 		return { true,res.map };
 	}
 	else {
@@ -724,8 +668,18 @@ pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 
 
 
-void readMap(const nav_msgs::OccupancyGrid map)
+void readMap( char* path)
 {
+	nav_msgs::OccupancyGrid   map;
+	nav_msgs::OccupancyGrid::ConstPtr   i;
+	rosbag::Bag map_reader;
+	map_reader.open(path);//absolute path to bag file
+	for (rosbag::MessageInstance const m : rosbag::View(map_reader))
+	{
+		i = m.instantiate<nav_msgs::OccupancyGrid>();
+		if (i != nullptr)
+			map = *i;
+	}
 	result = map;
 	ROS_INFO("Received a %d X %d map @ %.3f m/px\n", map.info.width, map.info.height, map.info.resolution);
 	rows = map.info.height;
