@@ -27,7 +27,7 @@
 #define INF 1e9
 using namespace std;
 float current_x, current_y; // current pose
-string map_path ;
+string map_path;
 
 
 void delay(int number_of_seconds)
@@ -135,21 +135,14 @@ double distance2N(pair<double, double> node1, pair<double, double> node2) {
 }
 vector<int> Nearest(vector<int> unVisitList, int node_num) {
 
-	//vector<double> distanceList(unVisitList.size(), INF);//o(n)
+	
 	vector<vector<int>>paths;
 	vector<int>path;
 	vector<int>path2;
 	int min = INF;
 	int min_size = INF;
 
-	//Node NearestNode = unVisitList[0];
-	/*for (int i = 0; i < unVisitList.size(); i++) {//o(n)
-		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
-			continue;
-		}
-		distanceList[i] = 1;
-	}*/
-	//FIND MIN DISTANCE NODE
+	
 	path2 = shortest_distance(node_num).second;
 	for (int i = 0; i < unVisitList.size(); i++) {//o(n^3logn)
 		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
@@ -262,7 +255,7 @@ double mapResolution;
 vector<vector<int> > grid;
 nav_msgs::OccupancyGrid result;
 pair<bool, nav_msgs::OccupancyGrid> requestMap(ros::NodeHandle& nh);
-void readMap( char* path);
+void readMap(char* path);
 void save_map(const nav_msgs::OccupancyGrid map);
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 int main(int argc, char** argv) {
@@ -270,12 +263,12 @@ int main(int argc, char** argv) {
 
 	ros::NodeHandle nh;
 
-	ROS_INFO("%s",argv[1]);
+	ROS_INFO("%s", argv[1]);
 	readMap(argv[1]);
 
 
 	ros::Rate rate(1);
-	map_path=argv[1];
+	map_path = argv[1];
 
 
 	tf::TransformListener listener;
@@ -290,15 +283,14 @@ int main(int argc, char** argv) {
 
 	int t;
 
-	int num2 = num;
-
+	
 
 	int num_node = 0;
 
-	int rt = num * num;
+	int numPoints = num * num;
 
 
-	check.resize(rt);//o(1)
+	check.resize(numPoints);//o(1)
 
 	start = clock();
 	//o(n)
@@ -344,16 +336,14 @@ int main(int argc, char** argv) {
 
 	pair<int, int> source(begin_row, begin_colum);
 	start = clock();
-	int tr = num * num;
-	int rowm, columm;
+
+	
 	vector<int>path_v4;
-	vector<vector<int>>paths;
-	vector<vector<int>> outputs;
-	vector<int> test;
-	adj_list.resize(tr);//o(1)
-	int d1 = 0, d2 = 0, d3 = 2, b = 1;
-	int best_script = 0;
-	int best_cost = INF;
+	
+	
+	adj_list.resize(numPoints);//o(1)
+	
+	
 
 
 
@@ -407,24 +397,22 @@ int main(int argc, char** argv) {
 
 	int it = find_v5(source);//o(n)
 
-	vector <int> st;
-	st.push_back(it);//o(1)
 
 
 
-	vector<pair<pair<int, int>, int>>stack;
-	int cost = 0;
-	int distance = 0;
+
+	
+	
 	int next_node = it;
-	int next;
+	
 	int flag = 0;
-	int postion = 0;
+	
 	ros::NodeHandle n2;
 
-ros::Subscriber maps;
+	ros::Subscriber maps;
 
 	vector<int>path_2;
-	int idex_t;
+	
 
 	MoveBaseClient ac("move_base", true);
 
@@ -437,17 +425,11 @@ ros::Subscriber maps;
 	goal.target_pose.header.frame_id = "map";
 
 
-//	std::vector<geometry_msgs::PoseStamped> plan;
- //geometry_msgs::PoseStamped start  ;
- //geometry_msgs::PoseStamped end  ;
-double x,pos_x,pos_y ,y;
- //  tf2_ros::Buffer mytf(ros::Duration(10));
-
-//costmap_2d::Costmap2DROS costmap("my_costmap", mytf);
-  //       carrot_planner::CarrotPlanner cp  ;
-    //     cp.initialize("my_carrot_planner", &costmap);
-		while (find(check.begin(), check.end(), 0) != check.end()) {
-	if (check_point(m[next_node].first, m[next_node].second)) {
+	
+	double x, pos_x, pos_y, y;
+	
+	while (find(check.begin(), check.end(), 0) != check.end()) {
+		if (check_point(m[next_node].first, m[next_node].second)) {
 
 
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
@@ -465,46 +447,46 @@ double x,pos_x,pos_y ,y;
 			ROS_INFO(" distance=%f ", dist);
 			//cover(next_node);
 
-			if(dist>0.1){
+			if (dist > 0.1) {
 
 
-			/*calculate angle*/
+				/*calculate angle*/
 
 
-			goal.target_pose.pose.position.x = current_x;
-			goal.target_pose.pose.position.y = current_y;
+				goal.target_pose.pose.position.x = current_x;
+				goal.target_pose.pose.position.y = current_y;
 
 
 
 
-			double theta = atan2(y, x);
-			// convert angle to quarternion
-			tf::Quaternion quaternion;
-			//tf::Quaternion quaternion = transform.getRotation(); 
-			quaternion = tf::createQuaternionFromYaw(theta);
-			geometry_msgs::Quaternion qMsg;
-			tf::quaternionTFToMsg(quaternion, qMsg);
-			// set quarternion to goal
-			goal.target_pose.pose.orientation = qMsg;
-			goal.target_pose.header.stamp = ros::Time::now();
+				double theta = atan2(y, x);
+				// convert angle to quarternion
+				tf::Quaternion quaternion;
+				//tf::Quaternion quaternion = transform.getRotation(); 
+				quaternion = tf::createQuaternionFromYaw(theta);
+				geometry_msgs::Quaternion qMsg;
+				tf::quaternionTFToMsg(quaternion, qMsg);
+				// set quarternion to goal
+				goal.target_pose.pose.orientation = qMsg;
+				goal.target_pose.header.stamp = ros::Time::now();
 
-			//ROS_INFO("Sending goal");
-			//ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
-			ac.sendGoal(goal);
-			ac.waitForResult();
-			goal.target_pose.header.stamp = ros::Time::now();
-			goal.target_pose.pose.position.x = pos_x;
-			goal.target_pose.pose.position.y = pos_y;
+				//ROS_INFO("Sending goal");
+				//ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
+				ac.sendGoal(goal);
+				ac.waitForResult();
+				goal.target_pose.header.stamp = ros::Time::now();
+				goal.target_pose.pose.position.x = pos_x;
+				goal.target_pose.pose.position.y = pos_y;
 
-			printf("%d", grid[m[next_node].first][m[next_node].second]);
-			ROS_INFO("Sending goal");
-			ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
-			ac.sendGoal(goal);
-			ac.waitForResult();
-			if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-				ROS_INFO("Hooray, the base moved 1 meter forward");
-			else
-				ROS_INFO("The base failed to move forward 1 meter for some reason");
+				printf("%d", grid[m[next_node].first][m[next_node].second]);
+				ROS_INFO("Sending goal");
+				ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
+				ac.sendGoal(goal);
+				ac.waitForResult();
+				if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+					ROS_INFO("Hooray, the base moved 1 meter forward");
+				else
+					ROS_INFO("The base failed to move forward 1 meter for some reason");
 
 			}
 
@@ -553,7 +535,7 @@ double x,pos_x,pos_y ,y;
 						if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
 
 							/*calculate angle*/
-						  
+
 							goal.target_pose.pose.position.x = current_x;
 
 							goal.target_pose.pose.position.y = current_y;
@@ -593,16 +575,13 @@ double x,pos_x,pos_y ,y;
 					}
 				}
 				next_node = path_2[path_2.size() - 1];
-				
+
 			}
 			else {
 
 				printf("there is stuck points");
 				printf("finish");
 				maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
-
-				delay(1000);
-
 				ros::spinOnce();
 				return 0;
 
@@ -610,20 +589,17 @@ double x,pos_x,pos_y ,y;
 
 
 
-			}
- 
-			
 		}
-printf("finish");
-	 maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
 
-	delay(1000);
-
-	ros::spinOnce();
-
-		return 0;
 
 	}
+	printf("finish");
+	maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
+	ros::spinOnce();
+
+	return 0;
+
+}
 
 
 
@@ -668,7 +644,7 @@ pair<bool, nav_msgs::OccupancyGrid>  requestMap(ros::NodeHandle& nh) {
 
 
 
-void readMap( char* path)
+void readMap(char* path)
 {
 	nav_msgs::OccupancyGrid   map;
 	nav_msgs::OccupancyGrid::ConstPtr   i;
