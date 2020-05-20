@@ -133,40 +133,7 @@ double distance2N(pair<double, double> node1, pair<double, double> node2) {
 		abs(node1.second - node2.second) * abs(node1.second - node2.second));
 
 }
-vector<int> Nearest(vector<int> unVisitList, int node_num) {
 
-	
-	vector<vector<int>>paths;
-	vector<int>path;
-	vector<int>path2;
-	int min = INF;
-	int min_size = INF;
-
-	
-	path2 = shortest_distance(node_num).second;
-	for (int i = 0; i < unVisitList.size(); i++) {//o(n^3logn)
-		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
-			continue;
-		}
-		if (path2[i] == -1)
-			continue;
-		path = Get_Path(node_num, i, path2);
-
-		if (path.size() < min_size) {
-			min_size = path.size();
-
-			paths.push_back(path);
-
-		}
-
-	}
-
-	if (paths.size() == 0) {
-		return path;
-	}
-
-	return paths[paths.size() - 1];
-}
 
 int find_v2(vector<pair<pair<int, int>, int>> stack, int point) {
 	for (int i = 0; i < stack.size(); i++) {
@@ -201,9 +168,9 @@ int find_v5(pair<int, int> node) {
 	return -1;
 }
 vector<vector<pair<int, int>>> matrix(6);//o(1)
-bool check_point(int x, int y) {
+bool check_point(int x, int y,int range) {
 	ROS_INFO("x=%d y=%d", x, y);
-	for (int i = 1; i < 6; i++) {
+	for (int i = 1; i < range; i++) {
 		if (x + i < matrix.size() && y + i < matrix.size())
 		{
 			if (matrix[x + i][y + i].second != 1)
@@ -248,6 +215,45 @@ bool check_point(int x, int y) {
 	return true;
 
 
+}
+vector<int> Nearest(vector<int> unVisitList, int node_num) {
+
+	
+	vector<vector<int>>paths;
+	vector<int>path;
+	vector<int>path2;
+	int min = INF;
+	int min_size = INF;
+
+	
+	path2 = shortest_distance(node_num).second;
+	for (int i = 0; i < unVisitList.size(); i++) {//o(n^3logn)
+		if (unVisitList[i] == -1 || unVisitList[i] == 1) {
+			continue;
+		}
+		if (path2[i] == -1)
+			continue;
+   if (!check_point(m[i].first, m[i].second,6)){
+check[i] = 1;
+   continue; 
+
+}
+		path = Get_Path(node_num, i, path2);
+
+		if (path.size() < min_size) {
+			min_size = path.size();
+
+			paths.push_back(path);
+
+		}
+
+	}
+
+	if (paths.size() == 0) {
+		return path;
+	}
+
+	return paths[paths.size() - 1];
 }
 int rows;
 int cols;
@@ -429,7 +435,7 @@ int main(int argc, char** argv) {
 	double x, pos_x, pos_y, y;
 	
 	while (find(check.begin(), check.end(), 0) != check.end()) {
-		if (check_point(m[next_node].first, m[next_node].second)) {
+		//if (check_point(m[next_node].first, m[next_node].second)) {
 
 
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
@@ -447,7 +453,7 @@ int main(int argc, char** argv) {
 			ROS_INFO(" distance=%f ", dist);
 			//cover(next_node);
 
-			if (dist > 0.1) {
+			if (dist > 0.25) {
 
 
 				/*calculate angle*/
@@ -473,7 +479,7 @@ int main(int argc, char** argv) {
 				//ROS_INFO("Sending goal");
 				//ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 				ac.sendGoal(goal);
-				ac.waitForResult();
+				//ac.waitForResult();
 				goal.target_pose.header.stamp = ros::Time::now();
 				goal.target_pose.pose.position.x = pos_x;
 				goal.target_pose.pose.position.y = pos_y;
@@ -482,7 +488,8 @@ int main(int argc, char** argv) {
 				ROS_INFO("Sending goal");
 				ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 				ac.sendGoal(goal);
-				ac.waitForResult();
+delay(1000);
+				//ac.waitForResult();
 				if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
 					ROS_INFO("Hooray, the base moved 1 meter forward");
 				else
@@ -490,7 +497,7 @@ int main(int argc, char** argv) {
 
 			}
 
-		}
+		//}
 
 		path_v4.push_back(next_node);
 
@@ -508,6 +515,13 @@ int main(int argc, char** argv) {
 			if (check[adj_list[next_node][i].first] != 0) {
 				continue;
 			}
+          if (!check_point(m[adj_list[next_node][i].first].first, m[adj_list[next_node][i].first].second,6)){
+check[adj_list[next_node][i].first] = 1;
+
+   continue; 
+
+}
+                             
 
 			flag = 1;
 
@@ -521,7 +535,7 @@ int main(int argc, char** argv) {
 			if (path_2.size() != 0) {
 
 				for (int i = 1; i < path_2.size() - 1; i++) {
-					if (check_point(m[path_2[i]].first, m[path_2[i]].second)) {
+					//if (check_point(m[path_2[i]].first, m[path_2[i]].second)) {
 						x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x) - current_x;
 						y = ((m[path_2[i]].second * result.info.resolution) + result.info.origin.position.y) - current_y;
 						pos_x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x);
@@ -532,7 +546,12 @@ int main(int argc, char** argv) {
 						current_y = transform.getOrigin().y();
 
 						ROS_INFO(" current x=%f y=%f", current_x, current_y);
-						if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.1) {
+     if (!check_point(m[path_2[i]].first, m[path_2[i]].second,6)){
+check[path_2[i]] = 1;
+   continue; 
+
+}
+						if (distance2N({ current_x,current_y }, { pos_x,pos_y }) > 0.25) {
 
 							/*calculate angle*/
 
@@ -556,7 +575,7 @@ int main(int argc, char** argv) {
 							ROS_INFO("Sending goal");
 							ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 							ac.sendGoal(goal);
-							ac.waitForResult();
+							//ac.waitForResult();
 							goal.target_pose.header.stamp = ros::Time::now();
 							goal.target_pose.pose.position.x = pos_x;
 							goal.target_pose.pose.position.y = pos_y;
@@ -564,7 +583,8 @@ int main(int argc, char** argv) {
 							ROS_INFO("Sending goal");
 							ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 							ac.sendGoal(goal);
-							ac.waitForResult();
+delay(1000);
+							//ac.waitForResult();
 							if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
 								ROS_INFO("Hooray, the base moved 1 meter forward");
 							else
@@ -572,7 +592,7 @@ int main(int argc, char** argv) {
 
 						}
 
-					}
+					//}
 				}
 				next_node = path_2[path_2.size() - 1];
 
