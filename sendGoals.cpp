@@ -170,49 +170,39 @@ int find_v5(pair<int, int> node) {
 vector<vector<pair<int, int>>> matrix(6);//o(1)
 bool check_point(int x, int y,int range) {
 	ROS_INFO("x=%d y=%d", x, y);
-	for (int i = 1; i < range; i++) {
-		if (x + i < matrix.size() && y + i < matrix.size())
+	
+for (int i = -range; i <= range; i++) {
+for(int j=-range;j<=range;j++){
+		if (x + i < matrix.size() && y + j < matrix.size()&&x - i > 0 && y - j > 0)
 		{
+			
 			if (matrix[x + i][y + i].second != 1)
 				return false;
 		}
-		if (x - i >= 0 && y - i >= 0)
-		{
-			if (matrix[x - i][y - i].second != 1)
-				return false;
-		}
-		if (x + i < matrix.size() && y - i >= 0)
-		{
-			if (matrix[x + i][y - i].second != 1)
-				return false;
-		}
-		if (x - i >= 0 && y + i < matrix.size())
-		{
-			if (matrix[x - i][y + i].second != 1)
-				return false;
-		}
-		if (x - i >= 0)
-		{
-			if (matrix[x - i][y].second != 1)
-				return false;
-		}
-		if (y - i >= 0)
-		{
-			if (matrix[x][y - i].second != 1)
-				return false;
-		}
-		if (y + i < matrix.size())
-		{
-			if (matrix[x][y + i].second != 1)
-				return false;
-		}
-		if (x + i < matrix.size())
-		{
-			if (matrix[x + i][y].second != 1)
-				return false;
-		}
+		
 	}
+}
 	return true;
+
+
+}
+}
+bool is_have_visited_nighbour(int x, int y,int range){
+for (int i = -range; i <= range; i++) {
+for(int j=-range;j<=range;j++){
+		if (x + i < matrix.size() && y + j < matrix.size()&&x - i > 0 && y - j > 0)
+		{
+			
+			if (check[find_v5({x+i,y+j})]==1)
+				return true;
+		}
+		
+	}
+}
+	return false;
+
+
+}
 
 
 }
@@ -433,11 +423,16 @@ int main(int argc, char** argv) {
 
 	
 	double x, pos_x, pos_y, y;
-	
+	int flag_count=0;
 	while (find(check.begin(), check.end(), 0) != check.end()) {
-		//if (check_point(m[next_node].first, m[next_node].second)) {
+		
 
 
+			
+			//cover(next_node);
+flag_count++;
+if(flag_count==6){
+flag_count=0;
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 			listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 
@@ -451,9 +446,6 @@ int main(int argc, char** argv) {
 			ROS_INFO("x=%f y=%f", pos_x, pos_y);
 			float dist = distance2N({ current_x,current_y }, { pos_x,pos_y });
 			ROS_INFO(" distance=%f ", dist);
-			//cover(next_node);
-
-			if (dist > 0.25) {
 
 
 				/*calculate angle*/
@@ -479,7 +471,7 @@ int main(int argc, char** argv) {
 				//ROS_INFO("Sending goal");
 				//ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 				ac.sendGoal(goal);
-				//ac.waitForResult();
+				ac.waitForResult();
 				goal.target_pose.header.stamp = ros::Time::now();
 				goal.target_pose.pose.position.x = pos_x;
 				goal.target_pose.pose.position.y = pos_y;
@@ -488,16 +480,17 @@ int main(int argc, char** argv) {
 				ROS_INFO("Sending goal");
 				ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 				ac.sendGoal(goal);
-delay(1000);
-				//ac.waitForResult();
+
+				ac.waitForResult();
 				if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
 					ROS_INFO("Hooray, the base moved 1 meter forward");
 				else
 					ROS_INFO("The base failed to move forward 1 meter for some reason");
 
-			}
+			
 
-		//}
+		
+                         }
 
 		path_v4.push_back(next_node);
 
@@ -535,7 +528,7 @@ check[adj_list[next_node][i].first] = 1;
 			if (path_2.size() != 0) {
 
 				for (int i = 1; i < path_2.size() - 1; i++) {
-					//if (check_point(m[path_2[i]].first, m[path_2[i]].second)) {
+					
 						x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x) - current_x;
 						y = ((m[path_2[i]].second * result.info.resolution) + result.info.origin.position.y) - current_y;
 						pos_x = ((m[path_2[i]].first * result.info.resolution) + result.info.origin.position.x);
@@ -575,7 +568,7 @@ check[path_2[i]] = 1;
 							ROS_INFO("Sending goal");
 							ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 							ac.sendGoal(goal);
-							//ac.waitForResult();
+							ac.waitForResult();
 							goal.target_pose.header.stamp = ros::Time::now();
 							goal.target_pose.pose.position.x = pos_x;
 							goal.target_pose.pose.position.y = pos_y;
@@ -583,8 +576,8 @@ check[path_2[i]] = 1;
 							ROS_INFO("Sending goal");
 							ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 							ac.sendGoal(goal);
-delay(1000);
-							//ac.waitForResult();
+
+							ac.waitForResult();
 							if (ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
 								ROS_INFO("Hooray, the base moved 1 meter forward");
 							else
@@ -592,18 +585,15 @@ delay(1000);
 
 						}
 
-					//}
+					
 				}
 				next_node = path_2[path_2.size() - 1];
 
 			}
 			else {
 
-				printf("there is stuck points");
-				printf("finish");
-				maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
-				ros::spinOnce();
-				return 0;
+				check[next_node]=1;
+next_node++;
 
 			}
 
