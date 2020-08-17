@@ -283,7 +283,10 @@ min_distance=d;
 }
 
 }
-
+if(path2[min]==INF){
+check[min]=1;
+return -1;
+}
 	return min;
 }
 
@@ -389,7 +392,7 @@ int y=coor.second;
 			else if(current_map.data[(x+i)+(y+j)*current_rows] != 0&&matrix[x+i][y+j].second==1){
 				  matrix[x+i][y+j].second=-1;
                                   check[matrix[x+i][y+j].first]=-1;
-                                  cover(matrix[x+i][y+j].first,8,2);
+                              //    cover(matrix[x+i][y+j].first,8,2);
                              // erase_from_adjs_list(x+i,y+j);
 
 			}
@@ -575,7 +578,7 @@ if (j - 1 >=0) {
 		}
 	}
 
-	int it = find_v5(source);//o(n)
+	int it = matrix[begin_row][begin_colum].first;//o(n)
 
 
 
@@ -634,7 +637,8 @@ check[next_node] = 2;
 
 
 }
-			 update(next_node,current_map,15);
+            if(flag_count>=5)
+	 update(next_node,current_map,15);		
 
  if(flag_count!=0&&matrix[m[next_node].first][m[next_node].second].second==1&&check[next_node]==0) {
 
@@ -697,7 +701,7 @@ cover(next_node,cover_rang,1);
 			
 
 		
-                    flag_count=1;     
+                    flag_count+=1;     
 
 	//	path_v4.push_back(next_node);
 
@@ -714,7 +718,7 @@ while(!found&&find(check.begin(), check.end(), 0) != check.end()){
 node_num_c=next_node;
 
 if(check[node_num_c]!=0){
-while(x_c+1<matrix.size()&&check[node_num_c]==1&&count_c<8){
+while(x_c+1<matrix.size()&&check[node_num_c]==1&&count_c<10){
 x_c++;
 count_c++;
 node_num_c=matrix[x_c][y_c].first;
@@ -730,7 +734,7 @@ x_c=x_o;
 y_c=y_o;
 node_num_c=matrix[x_c][y_c].first;
 }
-while(x_c-1>=0&&check[node_num_c]==1&&found==false&&count_c<8){
+while(x_c-1>=0&&check[node_num_c]==1&&found==false&&count_c<10){
 x_c--;
 count_c++;
 node_num_c=matrix[x_c][y_c].first;
@@ -747,7 +751,7 @@ x_c=x_o;
 y_c=y_o;
 node_num_c=matrix[x_c][y_c].first;
 }
-while(y_c-1>=0&&check[node_num_c]==1&&found==false&&count_c<8){
+while(y_c-1>=0&&check[node_num_c]==1&&found==false&&count_c<10){
 count_c++;
 y_c--;
 node_num_c=matrix[x_c][y_c].first;
@@ -764,7 +768,7 @@ x_c=x_o;
 y_c=y_o;
 node_num_c=matrix[x_c][y_c].first;
 }
-while(y_c+1<matrix.size()&&check[node_num_c]==1&&found==false&&count_c<8){
+while(y_c+1<matrix.size()&&check[node_num_c]==1&&found==false&&count_c<10){
 y_c++;
 count_c++;
 node_num_c=matrix[x_c][y_c].first;
@@ -875,6 +879,9 @@ if(found==false){
 ROS_INFO("dikstra is used");
 node_num_c = Nearest(check, next_node);
 found=true;
+if(node_num_c==-1)
+found=false;
+
 }
 }
 if(node_num_c==INF){
