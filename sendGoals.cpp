@@ -27,7 +27,7 @@
 using namespace std;
 string map_path;
 vector<vector<pair<int, int>>> adj_list(6);
-vector <int> check(6,0);
+vector <int> check(6, 0);
 vector<vector<pair<int, int>>> matrix(6);
 map< int, pair<int, int>> gmap;
 nav_msgs::OccupancyGrid result;
@@ -126,8 +126,8 @@ double distance2N(pair<double, double> node1, pair<double, double> node2) {
 
 
 
-bool check_point(int x, int y, int range) {
-	
+bool check_point(int x, int y, int range) {// check if there is obstcall in range
+
 
 	for (int i = -range; i <= range; i++) {
 		for (int j = -range; j <= range; j++) {
@@ -147,7 +147,7 @@ bool check_point(int x, int y, int range) {
 
 
 
-int Nearest(vector<int> unVisitList, int node_num) {
+int Nearest(vector<int> unVisitList, int node_num) {// get nearest point
 
 	pair<int, int>  coor = gmap[node_num];
 	int x = coor.first;
@@ -185,21 +185,22 @@ int Nearest(vector<int> unVisitList, int node_num) {
 		}
 
 	}
-	min_distance = distance2N(gmap[min], gmap[node_num]);
+	if (min_distance != INF) {// check if there is a new update in map 
+		min_distance = distance2N(gmap[min], gmap[node_num]);
 
-	for (int i = 0; i < path2.size(); i++) {
-		if (path2[i] == INF && check[i] == 0) {
-			min_distance2 = distance2N(gmap[i], gmap[node_num]);
-			if (min_distance2 < min_distance) {
-				min = i;
-				min_distance = distance2N(gmap[min], gmap[node_num]);
+		for (int i = 0; i < path2.size(); i++) {
+			if (path2[i] == INF && check[i] == 0) {
+				min_distance2 = distance2N(gmap[i], gmap[node_num]);
+				if (min_distance2 < min_distance) {
+					min = i;
+					min_distance = distance2N(gmap[min], gmap[node_num]);
+				}
+
 			}
 
+
 		}
-
-
 	}
-
 
 	if (min_distance == INF) {
 		double d;
@@ -214,19 +215,18 @@ int Nearest(vector<int> unVisitList, int node_num) {
 		}
 
 	}
-	if (path2[min] == INF) {
+	if (path2[min] == INF) {// this mean we can't reach this point so ignore it
 		check[min] = 1;
 		return -1;
 	}
 	return min;
 }
 
-void cover(int node_num, int range, int value) {
+void cover(int node_num, int range, int value) {// cover mean assign this value to the neighbour of this point 
 	pair<int, int>  coor = gmap[node_num];
 	int x = coor.first;
 	int y = coor.second;
-	ROS_INFO("x=%d y=%d", x, y);
-
+	
 	for (int i = -range; i <= range; i++) {
 		for (int j = -range; j <= range; j++) {
 			if (x + i < matrix.size() && y + j < matrix.size() && x - i >= 0 && y - j >= 0)
@@ -240,14 +240,14 @@ void cover(int node_num, int range, int value) {
 
 
 }
-void update_adj_list(int next_node) {
+void update_adj_list(int next_node) {//update adjust_list
 	pair<int, int>  coor = gmap[next_node];
 	int x = coor.first;
 	int y = coor.second;
-	//ROS_INFO("update node coor x = %d ,y = %d",x,y);
+	
 	if (x + 1 != matrix.size()) {
 		if (matrix[x + 1][y].second == 1 && matrix[x][y].second != -1) {
-			//ROS_INFO("add node ");
+			
 			adj_list[matrix[x][y].first].push_back(matrix[x + 1][y]);
 			adj_list[matrix[x + 1][y].first].push_back(matrix[x][y]);
 		}
@@ -257,8 +257,7 @@ void update_adj_list(int next_node) {
 	if (y + 1 != matrix[x].size()) {
 
 		if (matrix[x][y + 1].second == 1 && matrix[x][y].second != -1) {
-			//ROS_INFO("add node ");
-			adj_list[matrix[x][y].first].push_back(matrix[x][y + 1]);
+		    adj_list[matrix[x][y].first].push_back(matrix[x][y + 1]);
 			adj_list[matrix[x][y + 1].first].push_back(matrix[x][y]);
 		}
 
@@ -269,7 +268,7 @@ void update_adj_list(int next_node) {
 
 }
 
-void update(int next_node, nav_msgs::OccupancyGrid  current_map, int range) {
+void update(int next_node, nav_msgs::OccupancyGrid  current_map, int range) {// update the map in range
 	int   current_rows = current_map.info.height;
 	pair<int, int>  coor = gmap[next_node];
 	int x = coor.first;
@@ -280,27 +279,20 @@ void update(int next_node, nav_msgs::OccupancyGrid  current_map, int range) {
 		for (int j = -range; j <= range; j++) {
 			if (x + i < matrix.size() && y + j < matrix.size() && x - i >= 0 && y - j >= 0)
 			{
-				//ROS_INFO("result=%d new=%d", result.data[(x+i)+(y+j)*current_rows] , current_map.data[(x+i)+(y+j)*current_rows] );
-				if (current_map.data[(x + i) + (y + j) * current_rows] == 0 && matrix[x + i][y + j].second == -1) { // unoccupied cell
+				if (current_map.data[(x + i) + (y + j) * current_rows] == 0 && matrix[x + i][y + j].second == -1) { 
 					matrix[x + i][y + j].second = 1;
 					if (check[matrix[x + i][y + j].first] == -1 || check[matrix[x + i][y + j].first] == 2) {
 						check[matrix[x + i][y + j].first] = 0;
 						cover(matrix[x + i][y + j].first, 5, 0);
 					}
 					if (result.data[(x + i) + (y + j) * current_rows] != 0 || result.data[(x + i) + (y + j) * current_rows] == 100) {
-						//ROS_INFO("node %d update",  matrix[x+i][y+j].first);
 						check[matrix[x + i][y + j].first] = 0;
-
 						update_adj_list(matrix[x + i][y + j].first);
-
 					}
 				}
 				else if (current_map.data[(x + i) + (y + j) * current_rows] != 0 && matrix[x + i][y + j].second == 1) {
 					matrix[x + i][y + j].second = -1;
 					check[matrix[x + i][y + j].first] = -1;
-					//    cover(matrix[x+i][y+j].first,8,2);
-				   // erase_from_adjs_list(x+i,y+j);
-
 				}
 			}
 
@@ -323,9 +315,9 @@ int main(int argc, char** argv) {
 	int grid_x;
 	int grid_y;
 	float map_x, map_y;
-	int num = result.info.width;
+	int width = result.info.width;
 	int num_node = 0;
-	int numPoints = num * num;
+	int numPoints = width * width;
 	check.resize(numPoints);//o(1)
 	listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 	listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
@@ -342,11 +334,10 @@ int main(int argc, char** argv) {
 	tf::quaternionTFToMsg(quaternion_begin, qMsg_begin);
 
 	int begin_row = grid_x, begin_colum = grid_y;
-ROS_INFO("matrix size a %d ", matrix.size());
+	ROS_INFO("matrix size a %d ", matrix.size());
 	pair<int, int> source(begin_row, begin_colum);
 	adj_list.resize(numPoints);//o(1)
 
-	//o(n^2)
 	for (int j = 0; j < matrix.size(); j++) {
 
 
@@ -385,10 +376,10 @@ ROS_INFO("matrix size a %d ", matrix.size());
 
 	int it = matrix[begin_row][begin_colum].first;
 
-	int next_node = it;
+	int current_goal = it;
 	int flag = 0;
 	ros::NodeHandle n2;
-	ros::Subscriber maps;
+	ros::Subscriber subs;
 
 	vector<int>path_2;
 
@@ -408,7 +399,7 @@ ROS_INFO("matrix size a %d ", matrix.size());
 	double x, pos_x, pos_y, y;
 	int flag_count = 0;
 	nav_msgs::GetMap map_srv;
-	
+
 	while (find(check.begin(), check.end(), 0) != check.end()) {
 
 		ros::ServiceClient map_fetcher = nh.serviceClient<nav_msgs::GetMap>("dynamic_map");
@@ -419,22 +410,22 @@ ROS_INFO("matrix size a %d ", matrix.size());
 
 		}
 
-		if (!check_point(gmap[next_node].first, gmap[next_node].second, obscall_rang)) {
-			check[next_node] = 2;
-			ROS_INFO("check value %d", check[next_node]);
+		if (!check_point(gmap[current_goal].first, gmap[current_goal].second, obscall_rang)) {
+			check[current_goal] = 2;
+			ROS_INFO("check value %d", check[current_goal]);
 		}
 		if (flag_count >= 5)
-			update(next_node, current_map, 15);
+			update(current_goal, current_map, 15);
 
-		if (flag_count != 0 && matrix[gmap[next_node].first][gmap[next_node].second].second == 1 && check[next_node] == 0) {
-	                listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100)); 
+		if (flag_count != 0 && matrix[gmap[current_goal].first][gmap[current_goal].second].second == 1 && check[current_goal] == 0) {
+			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 			listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 			current_x = transform.getOrigin().x();
 			current_y = transform.getOrigin().y();
-			x = ((gmap[next_node].first * result.info.resolution) + result.info.origin.position.x) - current_x;
-			y = ((gmap[next_node].second * result.info.resolution) + result.info.origin.position.y) - current_y;
-			pos_x = ((gmap[next_node].first * result.info.resolution) + result.info.origin.position.x);
-			pos_y = ((gmap[next_node].second * result.info.resolution) + result.info.origin.position.y);
+			pos_x = ((gmap[current_goal].first * result.info.resolution) + result.info.origin.position.x);
+			pos_y = ((gmap[current_goal].second * result.info.resolution) + result.info.origin.position.y);
+			x = pos_x - current_x;
+			y = pos_y - current_y;
 			goal.target_pose.pose.position.x = current_x;
 			goal.target_pose.pose.position.y = current_y;
 			double theta = atan2(y, x);
@@ -452,134 +443,125 @@ ROS_INFO("matrix size a %d ", matrix.size());
 			goal.target_pose.header.stamp = ros::Time::now();
 			goal.target_pose.pose.position.x = pos_x;
 			goal.target_pose.pose.position.y = pos_y;
-			printf("%d", matrix[gmap[next_node].first][gmap[next_node].second]);
+			printf("%d", matrix[gmap[current_goal].first][gmap[current_goal].second]);
 			ROS_INFO("Sending goal");
 			ROS_INFO(" goal x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 			ac.sendGoal(goal);
 			ac.waitForResult();
 		}
-		cover(next_node, cover_rang, 1);
+		cover(current_goal, cover_rang, 1);
 		flag_count += 1;
-		int x_c = gmap[next_node].first;
-		int y_c = gmap[next_node].second;
-		int x_o = gmap[next_node].first;
-		int y_o = gmap[next_node].second;
-		int node_num_c;
+		int coor_x = gmap[current_goal].first;
+		int coor_y = gmap[current_goal].second;
+		int x_copy = coor_x;
+		int y_copy = coor_y;
+		int next_goal;
 		int count_c = 0;
 		bool found = false;
-
 		while (!found && find(check.begin(), check.end(), 0) != check.end()) {
-			node_num_c = next_node;
+			next_goal = current_goal;
 
-			if (check[node_num_c] != 0) {
-				while (x_c + 1 < matrix.size() && check[node_num_c] == 1 && count_c < 10) {
-					x_c++;
+			if (check[next_goal] != 0) {
+				while (coor_x + 1 < matrix.size() && check[next_goal] == 1 && count_c < 10) {
+					coor_x++;
 					count_c++;
-					node_num_c = matrix[x_c][y_c].first;
-					if (!check_point(x_c, y_c, obscall_rang)) {
-						check[node_num_c] = 2;
+					next_goal = matrix[coor_x][coor_y].first;
+					if (!check_point(coor_x, coor_y, obscall_rang)) {
+						check[next_goal] = 2;
 					}
 				}
 				count_c = 0;
-				if (check[node_num_c] == 0) {
+				if (check[next_goal] == 0) {
 					found = true;
 				}
 				else {
-					x_c = x_o;
-					y_c = y_o;
-					node_num_c = matrix[x_c][y_c].first;
+					coor_x = x_copy;
+					coor_y = y_copy;
+					next_goal = matrix[coor_x][coor_y].first;
 				}
-				while (x_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 10) {
-					x_c--;
+				while (coor_x - 1 >= 0 && check[next_goal] == 1 && found == false && count_c < 10) {
+					coor_x--;
 					count_c++;
-					node_num_c = matrix[x_c][y_c].first;
-					if (!check_point(x_c, y_c, obscall_rang)) {
-						check[node_num_c] = 2;
-					}
-
-				}
-				count_c = 0;
-				if (check[node_num_c] == 0) {
-					found = true;
-				}
-				else {
-					x_c = x_o;
-					y_c = y_o;
-					node_num_c = matrix[x_c][y_c].first;
-				}
-				while (y_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 10) {
-					count_c++;
-					y_c--;
-					node_num_c = matrix[x_c][y_c].first;
-					if (!check_point(x_c, y_c, obscall_rang)) {
-						check[node_num_c] = 2;
+					next_goal = matrix[coor_x][coor_y].first;
+					if (!check_point(coor_x, coor_y, obscall_rang)) {
+						check[next_goal] = 2;
 					}
 
 				}
 				count_c = 0;
-				if (check[node_num_c] == 0) {
+				if (check[next_goal] == 0) {
 					found = true;
 				}
 				else {
-					x_c = x_o;
-					y_c = y_o;
-					node_num_c = matrix[x_c][y_c].first;
+					coor_x = x_copy;
+					coor_y = y_copy;
+					next_goal = matrix[coor_x][coor_y].first;
 				}
-				while (y_c + 1 < matrix.size() && check[node_num_c] == 1 && found == false && count_c < 10) {
-					y_c++;
+				while (coor_y - 1 >= 0 && check[next_goal] == 1 && found == false && count_c < 10) {
 					count_c++;
-					node_num_c = matrix[x_c][y_c].first;
-					if (!check_point(x_c, y_c, obscall_rang)) {
-						check[node_num_c] = 2;
+					coor_y--;
+					next_goal = matrix[coor_x][coor_y].first;
+					if (!check_point(coor_x, coor_y, obscall_rang)) {
+						check[next_goal] = 2;
+					}
+
+				}
+				count_c = 0;
+				if (check[next_goal] == 0) {
+					found = true;
+				}
+				else {
+					coor_x = x_copy;
+					coor_y = y_copy;
+					next_goal = matrix[coor_x][coor_y].first;
+				}
+				while (coor_y + 1 < matrix.size() && check[next_goal] == 1 && found == false && count_c < 10) {
+					coor_y++;
+					count_c++;
+					next_goal = matrix[coor_x][coor_y].first;
+					if (!check_point(coor_x, coor_y, obscall_rang)) {
+						check[next_goal] = 2;
 					}
 				}
 				count_c = 0;
-				if (check[node_num_c] == 0) {
+				if (check[next_goal] == 0) {
 					found = true;
 				}
 				else {
-					x_c = x_o;
-					y_c = y_o;
-					node_num_c = matrix[x_c][y_c].first;
+					coor_x = x_copy;
+					coor_y = y_copy;
+					next_goal = matrix[coor_x][coor_y].first;
 				}
 
 				if (found == false) {
 					ROS_INFO("dikstra is used");
-					node_num_c = Nearest(check, next_node);
+					next_goal = Nearest(check, current_goal);
 					found = true;
-					if (node_num_c == -1)
+					if (next_goal == -1)
 						found = false;
 
 				}
 			}
-			if (node_num_c == INF) {
-				next_node++;
+			if (next_goal == INF) {
+				current_goal++;
 			}
 			else
-				next_node = node_num_c;
+				current_goal = next_goal;
 
 
 		}
 
 	}
-
+	//back to initail position
 	goal.target_pose.pose.position.x = map_x;
 	goal.target_pose.pose.position.y = map_y;
-
-
-
-
-
 	goal.target_pose.pose.orientation = qMsg_begin;
 	goal.target_pose.header.stamp = ros::Time::now();
-
-
 	ac.sendGoal(goal);
 	ac.waitForResult();
 	printf("finish");
-	maps = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
+	subs = nh.subscribe<nav_msgs::OccupancyGrid>("/map", 1, save_map);
 	ros::spinOnce();
-
 	return 0;
 
 }
@@ -618,23 +600,18 @@ void readMap(char* path)
 	ROS_INFO("Received a %d X %d map @ %.3f m/px\n", grid.info.width, grid.info.height, grid.info.resolution);
 	rows = grid.info.height;
 	cols = grid.info.width;
-	
-	
-
-matrix.resize(rows);
-	
-	
+	matrix.resize(rows);
 	int currCell = 0;
 	for (int i = 0; i < rows; i++)
 	{
 		for (int j = 0; j < cols; j++) {
 			gmap.insert({ currCell,{currCell % rows,currCell / rows} });
 			if (grid.data[currCell] == 0) { // unoccupied cell
-				
+
 				matrix[currCell % rows].push_back({ currCell,1 });
 			}
 			else {
-			                                                      
+
 				// occupied (100) or unknown cell (-1)
 				matrix[currCell % rows].push_back({ currCell,1 });
 			}
