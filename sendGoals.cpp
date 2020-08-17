@@ -26,9 +26,9 @@
 #define INF 1e9
 using namespace std;
 string map_path;
-vector<vector<pair<int, int>>> adj_list;
-vector <int> check;
-vector<vector<pair<int, int>>> matrix;
+vector<vector<pair<int, int>>> adj_list(6);
+vector <int> check(6,0);
+vector<vector<pair<int, int>>> matrix(6);
 map< int, pair<int, int>> gmap;
 nav_msgs::OccupancyGrid result;
 nav_msgs::OccupancyGrid  current_map;
@@ -324,10 +324,10 @@ int main(int argc, char** argv) {
 	int grid_y;
 	float map_x, map_y;
 	int num = result.info.width;
-	matrix.resize(num);
 	int num_node = 0;
 	int numPoints = num * num;
 	check.resize(numPoints);//o(1)
+	listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 	listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 	map_x = transform.getOrigin().x();
 	map_y = transform.getOrigin().y();
@@ -342,7 +342,7 @@ int main(int argc, char** argv) {
 	tf::quaternionTFToMsg(quaternion_begin, qMsg_begin);
 
 	int begin_row = grid_x, begin_colum = grid_y;
-
+ROS_INFO("matrix size a %d ", matrix.size());
 	pair<int, int> source(begin_row, begin_colum);
 	adj_list.resize(numPoints);//o(1)
 
@@ -427,6 +427,7 @@ int main(int argc, char** argv) {
 			update(next_node, current_map, 15);
 
 		if (flag_count != 0 && matrix[gmap[next_node].first][gmap[next_node].second].second == 1 && check[next_node] == 0) {
+	                listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100)); 
 			listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
 			current_x = transform.getOrigin().x();
 			current_y = transform.getOrigin().y();
@@ -614,13 +615,13 @@ void readMap(char* path)
 			grid = *i;
 	}
 	result = grid;
-	ROS_INFO("Received a %d X %d map @ %.3f m/px\n", gmap.info.width, gmap.info.height, gmap.info.resolution);
+	ROS_INFO("Received a %d X %d map @ %.3f m/px\n", grid.info.width, grid.info.height, grid.info.resolution);
 	rows = grid.info.height;
 	cols = grid.info.width;
 	
 	
 
-
+matrix.resize(rows);
 	
 	
 	int currCell = 0;
