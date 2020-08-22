@@ -26,10 +26,10 @@ using namespace std;
 
 
 
-
-
+#define back_to_lastGoal true
+#define use_second_list_flag true
 # define obscall_rang 4
-# define cover_rang 5
+# define cover_rang 4
 bool are_they_on_same_line(pair<int, int>n1, pair<int, int>n2, pair<int, int>n3) {
 	if ((n1.first == n2.first && n2.first == n3.first &&n1.first == n3.first) || (n1.second == n2.second && n2.second == n3.second && n1.second == n3.second)) {
 		return true;
@@ -168,7 +168,7 @@ bool check_point(int x, int y, int range) {
 
 
 
-int Nearest(vector<int> unVisitList, int node_num) {
+pair<int,int> Nearest(vector<int> unVisitList, int node_num) {
 
 	pair<int, int>  coor = m[node_num];
 	int x = coor.first;
@@ -241,9 +241,14 @@ int Nearest(vector<int> unVisitList, int node_num) {
 		check[min] = 1;
 		return -1;
 	}*/
+int size;
+if(min!=INF||path2[min]!=INF)
+  int size=Get_Path(node_num,min,res.second).size();
+
+size=0;
 
 ROS_INFO("dikstra finish min is %d", min);
-	return min;
+	return {min,size};
 }
 
 void cover(int node_num, int range, int value) {
@@ -278,10 +283,10 @@ int Nearest2(vector<int> unVisitList, int node_num) {
 	double min_distance = INF;
         pair<vector<int>,vector<int>> res;
 	vector<int>path2;
-	res = shortest_distance(node_num);
         path2=res.first;
 	vector<int> path;
 	double calcu_dis;
+        double d;
 	for (int i = 0; i < unVisitList.size(); i++) {
 		if (unVisitList[i] == 0) {
 			continue;
@@ -290,10 +295,10 @@ int Nearest2(vector<int> unVisitList, int node_num) {
 
 		
 
+		d = distance2N(m[i], m[node_num]);
+		if (d  < min_distance) {
 
-		if (path2[i] < min_distance) {
-
-			min_distance = path2[i];
+			min_distance = d;
 
 			min = i;
 
@@ -302,21 +307,7 @@ int Nearest2(vector<int> unVisitList, int node_num) {
 	}
 	
 
-
-if (min_distance == INF||min==INF) {
-		double d;
-		for (int i = 0; i < unVisitList.size(); i++) {
-			if (unVisitList[i] == 0)
-				continue;
-			d = distance2N(m[i], m[node_num]);
-			if (d < min_distance) {
-				min_distance = d;
-				min = i;
-			}
-		}
-
-	}
-
+ROS_INFO("nearset2 %d",min);
 
 	return min;
 }
@@ -412,14 +403,19 @@ ROS_INFO_STREAM("Received pose: " << msg);
 vector<vector<int> > grid;
 void readMap(char* path);
 void save_map(ros::NodeHandle nh,char* path);
+int flag_timer=0;
+void timerCallback(const ros::TimerEvent& event){
+ROS_INFO("TImer flip");
+  int flag_timer=1;
 
+}
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 int main(int argc, char** argv) {
 	float current_x, current_y; // current pose
 	nav_msgs::OccupancyGrid  current_map;
 	ros::init(argc, argv, "navigation_goals");
 
-	ros::NodeHandle nh;
+	ros::NodeHandle nh,nh2;
 
 	ROS_INFO("%s", argv[1]);
 	readMap(argv[1]);
@@ -607,10 +603,18 @@ int old_node;
 	int old_node2;
 	int first_time = 0;
 	vector<int> threepoints;
-
+int dikstra_flag=0;
      double theta2=0;
+     int timeout=20;
+       boost::shared_ptr<geometry_msgs::PoseStamped const> sharedmsg;
+        geometry_msgs::PoseStamped current_pose;
+       int count_unstack=0;
+        int flag_back=0;
+        int count_read_point=0;
 	while (find(check.begin(), check.end(), 0) != check.end()) {
-
+			ROS_INFO("first list");
+                     if(flag_count==0)
+		cover(next_node, cover_rang, 1);
 		ros::ServiceClient map_fetcher = nh.serviceClient<nav_msgs::GetMap>("dynamic_map");
 
 		if (map_fetcher.call(map_srv))
@@ -633,9 +637,9 @@ int old_node;
 
 		if (flag_count != 0 && matrix[m[next_node].first][m[next_node].second].second == 1 && check[next_node] == 0) {
 
-
+dikstra_flag=0;
 		
-		if (threepoints.size() !=3) {
+		/*if (threepoints.size() !=3) {
 			threepoints.push_back(next_node);
 		}
 		if(threepoints.size() == 3) {
@@ -648,7 +652,7 @@ int old_node;
 			
 			threepoints.push_back(old_node);
 			threepoints.push_back(next_node);
-		}
+		}*/
 
 			listener.waitForTransform("/map", "/base_link", ros::Time(), ros::Duration(100));
 			listener.lookupTransform("/map", "/base_link", ros::Time(0), transform);
@@ -675,6 +679,7 @@ int old_node;
 			//ROS_INFO("x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 			//ac.sendGoal(goal);
 			//ac.waitForResult(ros::Duration(15));
+                        
 			goal.target_pose.header.stamp = ros::Time::now();
 			goal.target_pose.pose.position.x = pos_x;
 			goal.target_pose.pose.position.y = pos_y;
@@ -682,14 +687,50 @@ int old_node;
 			ROS_INFO("Sending goal");
 			ROS_INFO(" goal x=%f y=%f", goal.target_pose.pose.position.x, goal.target_pose.pose.position.y);
 			ac.sendGoal(goal);
-			ac.waitForResult(ros::Duration(30));
-                       
-//pose2D_hector_sub_ = nh.subscribe("/slam_out_pose", 10, &get_visited_nodes);
-//ros::spin();
 
+ ros::Rate loop_rate(1.5);
+check[next_node]=1;
+		cover(next_node, 4, 1);			
+ros::Time start_time = ros::Time::now(); 
+while(ros::ok()&&ros::Time::now() - start_time < ros::Duration(timeout)&&ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED) {
 
-		}
+if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
+    break;
+   sharedmsg=ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/slam_out_pose");
+if(sharedmsg != NULL){
+ current_pose = *sharedmsg;
+    ROS_INFO("Received pose current_pose.x: %f  current_pose.y: %f" ,  current_pose.pose.position.x,current_pose.pose.position.y);
+   
+    grid_x = (unsigned int)((current_pose.pose.position.x - result.info.origin.position.x) / result.info.resolution);
+	grid_y = (unsigned int)((current_pose.pose.position.y - result.info.origin.position.y) / result.info.resolution);
+ 
+check[matrix[grid_x][grid_y].first]=1;
+//if(grid_x==m[next_node].first||grid_y==m[next_node].second)
+		cover(matrix[grid_x][grid_y].first, 4, 1);
 
+list_of_not_succeeded[matrix[grid_x][grid_y].first]=0;
+  }
+ 
+   ros::spinOnce();
+         loop_rate.sleep();   
+  } 
+   sharedmsg=ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/slam_out_pose");
+    current_pose = *sharedmsg;
+    ROS_INFO("Received pose current_pose.x: %f  current_pose.y: %f" ,  current_pose.pose.position.x,current_pose.pose.position.y);
+   
+    grid_x = (unsigned int)((current_pose.pose.position.x - result.info.origin.position.x) / result.info.resolution);
+    grid_y = (unsigned int)((current_pose.pose.position.y - result.info.origin.position.y) / result.info.resolution);
+ 
+if(distance2N({grid_x,grid_y},m[next_node])<10){
+flag_back=1;
+}else{
+flag_back=0;
+
+}
+
+}
+		
+if(use_second_list_flag){
 if(ac.getState() != actionlib::SimpleClientGoalState::SUCCEEDED&&flag_count!=0&&check_point(m[next_node].first, m[next_node].second, obscall_rang)){
 ROS_INFO(" not SUCCEEDED goal");
       count_nonv++;  
@@ -704,18 +745,28 @@ last_unstacknode_check[next_node]=1;
 last_unstacknode.push_back(next_node);
 
 }
-if( count_nonv==2){
+if( count_nonv==2 &&count_unstack<3&&flag_back==0){
 count_nonv=0;
-next_node=last_unstacknode[last_unstacknode.size()-2];
+int nnode=Nearest2(last_unstacknode,next_node);
+
+if(distance2N(m[next_node],m[nnode])<50){
+next_node=nnode;
 auto it = last_unstacknode.begin(); 
+       
  last_unstacknode.erase(it+last_unstacknode.size()-2); 
 check[next_node]=0;
 theta2=M_PI;
+count_unstack++;
+
 continue;
+}
+
+}else{
+count_unstack=0;
 
 }
-theta2=0;
-		cover(next_node, cover_rang, 1);
+}
+theta2=0;		
 		flag_count += 1;
 
 
@@ -731,9 +782,9 @@ theta2=0;
 
 		while (!found && find(check.begin(), check.end(), 0) != check.end()) {
 			node_num_c = next_node;
+ROS_INFO("find goal");
 
-			if (check[node_num_c] != 0) {
-				while (x_c + 1 < matrix.size() && check[node_num_c] == 1 && count_c < 15) {
+				while (x_c + 1 < matrix.size() && check[node_num_c] == 1 && count_c < 20) {
 					x_c++;
 					count_c++;
 					node_num_c = matrix[x_c][y_c].first;
@@ -750,7 +801,7 @@ theta2=0;
 					y_c = y_o;
 					node_num_c = matrix[x_c][y_c].first;
 				}
-				while (x_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 15) {
+				while (x_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 20) {
 					x_c--;
 					count_c++;
 					node_num_c = matrix[x_c][y_c].first;
@@ -768,7 +819,7 @@ theta2=0;
 					y_c = y_o;
 					node_num_c = matrix[x_c][y_c].first;
 				}
-				while (y_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 15) {
+				while (y_c - 1 >= 0 && check[node_num_c] == 1 && found == false && count_c < 20) {
 					count_c++;
 					y_c--;
 					node_num_c = matrix[x_c][y_c].first;
@@ -786,7 +837,7 @@ theta2=0;
 					y_c = y_o;
 					node_num_c = matrix[x_c][y_c].first;
 				}
-				while (y_c + 1 < matrix.size() && check[node_num_c] == 1 && found == false && count_c < 15) {
+				while (y_c + 1 < matrix.size() && check[node_num_c] == 1 && found == false && count_c < 20) {
 					y_c++;
 					count_c++;
 					node_num_c = matrix[x_c][y_c].first;
@@ -804,15 +855,24 @@ theta2=0;
 					node_num_c = matrix[x_c][y_c].first;
 				}
 
-
+                                    timeout=20;
 				if (found == false) {
-                                        pair<int,vector<int>> rs;
+                                        dikstra_flag=1;
+                                        pair<int,int> rs;
                                         vector<int> longPath;
 					ROS_INFO("dikstra is used");
-					node_num_c = Nearest(check, next_node);    
+					rs = Nearest(check, next_node);   
+                                        node_num_c=rs.first;
 					found = true;
-					if (node_num_c == -1)
+                                        timeout=rs.second/2;
+                                        if( timeout==0)
+                                          timeout=20;
+                                        ROS_INFO("dikstra path size %d", timeout);
+					if (node_num_c == -1){
 						found = false;
+                                             timeout=20;
+                                             dikstra_flag=0;
+                                      }
 
 				}
 			}
@@ -823,18 +883,24 @@ theta2=0;
 				next_node = node_num_c;
 
 
-		}
+		
 
 	}
 
 int nonv_node=next_node;
 while(find(list_of_not_succeeded.begin(), list_of_not_succeeded.end(), 1) != list_of_not_succeeded.end()||find(list_of_not_succeeded.begin(), list_of_not_succeeded.end(), 2) != list_of_not_succeeded.end()){
 
-
-
-
-
+if(!use_second_list_flag)
+    break;
 nonv_node=Nearest2(list_of_not_succeeded,nonv_node);
+if(check[nonv_node]==1||check[nonv_node]==2){
+list_of_not_succeeded[nonv_node]=0;
+ROS_INFO("continue");
+ continue;
+}
+
+
+
 
 if(nonv_node==INF){
 
